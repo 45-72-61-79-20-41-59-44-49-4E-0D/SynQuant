@@ -6,6 +6,7 @@ SynQuant detect synapses through a totally unsupervised probability principled f
 The paper for this algorithm is in preparation.
 # How to cite
 The journal paper for this algorithm is in preparation. You can cite the conference paper first:
+
 Yizhi Wang, Guilai Shi, Yinxue Wang, Lin Tian, Guoqiang Yu*, “PPSD: Probability Principled Synapse Detection,” BioImage Informatics Conference 2015, October 2015.
 
 # Tutorial
