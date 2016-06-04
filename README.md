@@ -5,6 +5,7 @@ SynQuant detect synapses through a totally unsupervised probability principled f
 
 The paper for this algorithm is in preparation.
 
-
+# Tutorial
+Please see the user manual.
 
 [1].	Meijering E, Jacob M, Sarria J, Steiner P, Hirling H, Unser M. Design and valida-tion of a tool for neurite tracing and analysis in fluorescence microscopy im-ages. Cytometry A 2004;58:167–76.
