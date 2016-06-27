@@ -2,11 +2,11 @@ import java.util.ArrayList;
 
 
 public class ppsdreal{
-	protected int [][] kMap;//
-	protected double [][] zMap;
-	protected double [][] thrMap;
-	protected double thrZ;
-	protected int nSyn0;
+	protected int [][] kMap;//mark of detected synapses from 1 to nSyn0
+	protected double [][] zMap;//zscores of detected synapses
+	protected double [][] thrMap;//threshold map
+	protected double thrZ;//lowest zscore of detected synapses
+	protected int nSyn0;//number of detected synapses
 	
     public ppsdreal(double [][] G,double [][] Gt, boolean[][] kMask, ParaP p, ParaQ q) {
     	
@@ -39,9 +39,9 @@ public class ppsdreal{
     				for(int i=0;i<SynBBest.kMap2.length;i++){
     					for(int j=0;j<SynBBest.kMap2[0].length;j++){
     						if(SynBBest.kMap2[i][j]){
-    		    	            kMap[i][j] = nSyn0;
-    		    	            zMap[i][j] = SynBBest.zMap2[i][j];
-    		    	            thrMap[i][j] = SynBBest.thrMap2[i][j];
+		    		    	            kMap[i][j] = nSyn0;
+		    		    	            zMap[i][j] = SynBBest.zMap2[i][j];
+		    		    	            thrMap[i][j] = SynBBest.thrMap2[i][j];
     						}
     					}
     				}
@@ -50,9 +50,9 @@ public class ppsdreal{
     				for(int i=0;i<bestSynMap.kMap0.length;i++){
     					for(int j=0;j<bestSynMap.kMap0[0].length;j++){
     						if(bestSynMap.kMap0[i][j]){
-    		    	            kMap[i][j] = nSyn0;
-    		    	            zMap[i][j] = bestSynMap.zMap0[i][j];
-    		    	            thrMap[i][j] = bestSynMap.thrMap0[i][j];
+		    		    	            kMap[i][j] = nSyn0;
+		    		    	            zMap[i][j] = bestSynMap.zMap0[i][j];
+		    		    	            thrMap[i][j] = bestSynMap.thrMap0[i][j];
     						}
     					}
     				}
