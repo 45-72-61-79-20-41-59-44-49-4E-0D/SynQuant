@@ -4,7 +4,7 @@ import java.util.ArrayList;
 public class ppsdreal{
 	protected int [][] kMap;//mark of detected synapses from 1 to nSyn0
 	protected double [][] zMap;//zscores of detected synapses
-	protected double [][] thrMap;//threshold map
+	protected double [][] thrMap;//threshold map (10,20,...250)
 	protected double thrZ;//lowest zscore of detected synapses
 	protected int nSyn0;//number of detected synapses
 	
