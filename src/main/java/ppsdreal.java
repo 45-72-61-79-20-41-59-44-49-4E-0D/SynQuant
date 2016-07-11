@@ -100,7 +100,7 @@ public class ppsdreal{
 
     	boolean[][] kMapi = new boolean[kMap.length][kMap[0].length];
     	
-    	double thrZx = thrZ <2? 2:thrZ; //pvalue threshold should not be too small, otherwise FDR control will be not useful
+    	double thrZx = thrZ <-2? -2:thrZ; //pvalue threshold should not be too small, otherwise FDR control will be not useful
     	int[] roi_size = new int[nSyn0];
     	for(int i=0;i<kMap.length;i++)
     		for(int j=0;j<kMap[0].length;j++)
