@@ -2,13 +2,13 @@ import java.util.ArrayList;
 
 
 public class ppsdreal{
-	protected int [][] kMap;//mark of detected synapses from 1 to nSyn0
-	protected double [][] zMap;//zscores of detected synapses
-	protected double [][] thrMap;//threshold map (10,20,...250)
-	protected double thrZ;//lowest zscore of detected synapses
-	protected int nSyn0;//number of detected synapses
+	protected int [][] kMap;//
+	protected double [][] zMap;
+	protected double [][] thrMap;
+	protected double thrZ;
+	protected int nSyn0;
 	
-    public ppsdreal(double [][] G,double [][] Gt, boolean[][] kMask, ParaP p, ParaQ q) {
+    public ppsdreal(short[] imArray, double [][] G,double [][] Gt, boolean[][] kMask, ParaP p, ParaQ q) {
     	
     	kMap = new int[Gt.length][Gt[0].length];
     	zMap = new double[Gt.length][Gt[0].length];
@@ -17,31 +17,45 @@ public class ppsdreal{
     	boolean doneAll = false;
     	int loopCnt = 0;
     	nSyn0 = 1;
-    	//double var0 = q.var;
     	BasicMath BM = new BasicMath();
-
-    	scanAll3 scanMap = new scanAll3(G,Gt,kMask,p,q);// thresholding images with multi thresholds(50:10:220)
+    	long startTime1=System.nanoTime();
+    	scanAll3 scanMap = new scanAll3(imArray, G,Gt,kMask,p,q);// thresholding images with multi thresholds(50:10:220)
+    	//byte[] usedN = new byte[imArray.length];
+    	//ComponentTree CT_scanMap = new ComponentTree(imArray,usedN, G[0].length, G.length,p, q);
+    	long endTime1=System.nanoTime();
+    	System.out.println("scanAll3 First Running time: "+(endTime1-startTime1)/1e9); 
     	ArrayList<Double> Iter_PopUplist = new ArrayList<Double>(); //zscores of detected synapses
     	//
+    	startTime1=System.nanoTime();
+    	double bs = 0,sib=0,suc=0;
     	while(!doneAll){
     		loopCnt = loopCnt + 1;
     		ArrayList<Integer[]> idxUpdt = new ArrayList<Integer[]>();
+    		long startTime2=System.nanoTime();
     		BestSyn bestSynMap = new BestSyn(scanMap, p, Iter_PopUplist);//find best region with highest zscore
+    		thrZ = bestSynMap.thrZ;
+    		long endTime2=System.nanoTime();
+        	bs = bs+(endTime2-startTime2)/1e9;
+        	
     		Iter_PopUplist = new ArrayList<Double>(bestSynMap.PopUplist);
     		// further scan within best region -----
     		if(BM.Allfalse(bestSynMap.kMap0)){
     			doneAll = true;
     		}
     		else{//start scan, find if there is a region score higher inside the best region
+    			startTime2=System.nanoTime();
     			SynInBest SynBBest = new SynInBest(Gt,bestSynMap,p,q);
+    			endTime2=System.nanoTime();
+    			sib = sib+(endTime2-startTime2)/1e9;
+            	
     			if(SynBBest.foundOne){
     				//insert the found region(marked in SynBBest) into kMap, zMap, thrMap
     				for(int i=0;i<SynBBest.kMap2.length;i++){
     					for(int j=0;j<SynBBest.kMap2[0].length;j++){
     						if(SynBBest.kMap2[i][j]){
-		    		    	            kMap[i][j] = nSyn0;
-		    		    	            zMap[i][j] = SynBBest.zMap2[i][j];
-		    		    	            thrMap[i][j] = SynBBest.thrMap2[i][j];
+    		    	            kMap[i][j] = nSyn0;
+    		    	            zMap[i][j] = SynBBest.zMap2[i][j];
+    		    	            thrMap[i][j] = SynBBest.thrMap2[i][j];
     						}
     					}
     				}
@@ -50,9 +64,9 @@ public class ppsdreal{
     				for(int i=0;i<bestSynMap.kMap0.length;i++){
     					for(int j=0;j<bestSynMap.kMap0[0].length;j++){
     						if(bestSynMap.kMap0[i][j]){
-		    		    	            kMap[i][j] = nSyn0;
-		    		    	            zMap[i][j] = bestSynMap.zMap0[i][j];
-		    		    	            thrMap[i][j] = bestSynMap.thrMap0[i][j];
+    		    	            kMap[i][j] = nSyn0;
+    		    	            zMap[i][j] = bestSynMap.zMap0[i][j];
+    		    	            thrMap[i][j] = bestSynMap.thrMap0[i][j];
     						}
     					}
     				}
@@ -68,19 +82,25 @@ public class ppsdreal{
     						idxUpdt.add(new Integer[] {i,j});
     				}
     			}
+    			startTime2=System.nanoTime();
     			scanMap.scanUpdtCrop(G,Gt,kMask,idxUpdt,p,q);
+    			endTime2=System.nanoTime();
+    			suc = sib+(endTime2-startTime2)/1e9;
     		}
     	}
+    	endTime1=System.nanoTime();
+    	System.out.println("While Loop Running time: "+(endTime1-startTime1)/1e9+" Loop:"+loopCnt); 
+    	System.out.println("BestSyn,"+bs+" SynInBest,"+sib+" scanUpdtCrop,"+suc); 
     	nSyn0--;
     }
     // post processing with size constrain and pvalue constrain
     public boolean [][] ppsd_post(double [][] Gt, ParaP p, ParaQ q){
-    	System.out.println("Analysis----");
+    	//System.out.println("Analysis----");
     	ImageHandling IH = new ImageHandling();
 
     	boolean[][] kMapi = new boolean[kMap.length][kMap[0].length];
     	
-    	double thrZx = thrZ<-2? -2:thrZ; //pvalue threshold should not be too small, otherwise FDR control will be not useful
+    	double thrZx = thrZ <2? 2:thrZ; //pvalue threshold should not be too small, otherwise FDR control will be not useful
     	int[] roi_size = new int[nSyn0];
     	for(int i=0;i<kMap.length;i++)
     		for(int j=0;j<kMap[0].length;j++)
@@ -112,7 +132,6 @@ public class ppsdreal{
         			for(int i=0;i<idx.length;i++){
         				kMapi[idx[i][0]][idx[i][1]] = true;
         			}
-        			
         		}
         	}
     	}
