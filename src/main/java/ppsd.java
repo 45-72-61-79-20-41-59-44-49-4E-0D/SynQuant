@@ -78,7 +78,7 @@ public class ppsd {
 		for (int i = 0; i < kMask.length; i++)
 			for (int j = 0; j < kMask[0].length; j++)
 				kMask[i][j] = true;
-		ppsdreal ppsd_main = new ppsdreal( G,Gt, kMask, p, q);
+		ppsdreal ppsd_main = new ppsdreal(imArray, G,Gt, kMask, p, q);
 
 		//Post processing: size and zscore
 		kSynR1 = ppsd_main.ppsd_post(Gt,p,q);
@@ -233,12 +233,12 @@ public class ppsd {
 		RealVector solution = solver.solve(Atb);
 		SimplexOptimizer optimizer = new SimplexOptimizer(1e-10, 1e-30);
 		final pgL pgL_fun = new pgL(xMean, xStd, xCi, xDi);
-		
+		// for debugging
 		final PointValuePair pEst = optimizer.optimize(new MaxEval(10000), new ObjectiveFunction(pgL_fun), GoalType.MINIMIZE,
 				new InitialGuess(new double[] {solution.getEntry(0), solution.getEntry(1)} ), new NelderMeadSimplex(new double[] { 0.0001, 0.0001 }));
 		double[] pEst0 = new double[2];
-		pEst0[0] = pEst.getPoint()[0];//0.0080;
-		pEst0[1] = pEst.getPoint()[1];//-1.4e-4;
+		pEst0[0] = pEst.getPoint()[0];//0.0080;//
+		pEst0[1] = pEst.getPoint()[1];//-1.4e-4;//
 		System.out.println("alpha: "+pEst0[0]+" sigma:"+pEst0[1]);
 		double alpha = pEst0[0];
 		double sigma2 = Math.max(pEst0[1],2e-4); // this is the var of gausssian noise
