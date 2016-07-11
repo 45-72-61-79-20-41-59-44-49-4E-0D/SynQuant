@@ -261,6 +261,100 @@ public class ImageHandling {
         NextLabel--;
         return labels;
 	}
+	//bwlabel for double data
+	int [][] bwlabel(double[][] BWIM, int CONNECT, ArrayList<Double> zscores){
+        int[][] labels = new int[BWIM.length][BWIM[0].length];
+
+        NextLabel = 1;
+
+        //First pass
+        if(CONNECT==8){
+	        for(int i=0; i<BWIM.length; i++) {
+	            for(int j=0; j<BWIM[0].length; j++) {
+	                if(BWIM[i][j]!=0 & labels[i][j]==0) {
+	                	zscores.add(BWIM[i][j]);
+	                    //Labels of neighbors
+	                	ArrayList<Integer[]> roi_pos = new ArrayList<Integer[]>();
+	                	roi_pos.add(new Integer[] {i,j});
+	                	labels[i][j]=NextLabel;
+	                	int loop_cnt = 0;
+	                	while(true){
+	                		if(loop_cnt>=roi_pos.size())
+	                			break;
+	                		int cur_i = roi_pos.get(loop_cnt)[0];
+	                		int cur_j = roi_pos.get(loop_cnt++)[1];
+	                		for(int ni=-1; ni<=1; ni++) {
+	                            for(int nj=-1; nj<=1; nj++) {
+	                                if(cur_i+ni<0 || cur_j+nj<0 || cur_i+ni>labels.length-1 || cur_j+nj>labels[0].length-1) {
+	                                    continue;
+	                                }
+	                                else {
+	                                    if(ni == 0 && nj == 0) continue;
+	                                    if(labels[cur_i+ni][cur_j+nj] == 0 & BWIM[cur_i][cur_j] == BWIM[cur_i+ni][cur_j+nj]){
+	                                    	roi_pos.add(new Integer[] {cur_i+ni,cur_j+nj});
+	                                    	labels[cur_i+ni][cur_j+nj] = NextLabel;
+	                                    }
+	                                }
+	                            }
+	                		}
+	                	}
+	                	NextLabel++;
+	                }
+	            }
+	        }
+        }
+        else{
+	        for(int i=0; i<BWIM.length; i++) {
+	            for(int j=0; j<BWIM[0].length; j++) {
+	                if(BWIM[i][j]!=0 & labels[i][j]==0) {
+	                	zscores.add(BWIM[i][j]);
+	                    //Labels of neighbors
+	                	ArrayList<Integer[]> roi_pos = new ArrayList<Integer[]>();
+	                	roi_pos.add(new Integer[] {i,j});
+	                	labels[i][j]=NextLabel;
+	                	int loop_cnt = 0;
+	                	while(true){
+	                		if(loop_cnt>=roi_pos.size())
+	                			break;
+	                		//System.out.println(""+loop_cnt);
+	                		//if(loop_cnt==443)
+	                		//	loop_cnt = 443;
+	                		int cur_i = roi_pos.get(loop_cnt)[0];
+	                		int cur_j = roi_pos.get(loop_cnt++)[1];
+	                		if(cur_i+1<BWIM.length){
+	                            if(labels[cur_i+1][cur_j] == 0 & BWIM[cur_i][cur_j] == BWIM[cur_i+1][cur_j]){
+	                            	roi_pos.add(new Integer[] {cur_i+1,cur_j});
+	                            	labels[cur_i+1][cur_j] = NextLabel;
+	                            }
+	                		}
+	                		if(cur_j+1<BWIM[0].length){
+	                            if(labels[cur_i][cur_j+1] == 0 & BWIM[cur_i][cur_j] == BWIM[cur_i][cur_j+1]){
+	                            	roi_pos.add(new Integer[] {cur_i,cur_j+1});
+	                            	labels[cur_i][cur_j+1] = NextLabel;
+	                            }
+	                		}
+	                		if(cur_i-1>0){
+	                            if(labels[cur_i-1][cur_j] == 0 & BWIM[cur_i][cur_j] == BWIM[cur_i-1][cur_j]){
+	                            	roi_pos.add(new Integer[] {cur_i-1,cur_j});
+	                            	labels[cur_i-1][cur_j] = NextLabel;
+	                            }
+	                		}
+	                		if(cur_j-1>0){
+	                            if(labels[cur_i][cur_j-1] == 0 & BWIM[cur_i][cur_j] == BWIM[cur_i][cur_j-1]){
+	                            	roi_pos.add(new Integer[] {cur_i,cur_j-1});
+	                            	labels[cur_i][cur_j-1] = NextLabel;
+	                            }
+	                		}
+	                		//deeplabel(BWIM, labels, i, j ,NextLabel);
+	                	}
+	                	NextLabel++;
+	                }
+	            }
+	        }
+        }
+        NextLabel--;
+        return labels;
+	}
     void deeplabel(boolean[][] matrix, int[][] labels, int i, int j ,int NextLabel){
 		for(int ni=-1; ni<=1; ni++) {
             for(int nj=-1; nj<=1; nj++) {
@@ -379,7 +473,7 @@ public class ImageHandling {
 	    sigma = sigma*Math.sqrt(qVar);
 
 	    double zScore = (t0-mu)/sigma;
-	    t0 = t0/Math.sqrt(qVar);
+	    //t0 = t0/Math.sqrt(qVar);
 		
 		return zScore;
 	}
