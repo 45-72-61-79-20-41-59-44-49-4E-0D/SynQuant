@@ -13,5 +13,7 @@ Yizhi Wang, Guilai Shi, Yinxue Wang, Lin Tian, Guoqiang Yu*, “PPSD: Probabilit
 Please see the user manual.
 
 [1].	Ranefall, Petter, Sajith Kecheril Sadanandan, and Carolina Wählby. "Fast Adaptive Local Thresholding Based on Ellipse fit." International Symposium on Biomedical Imaging (ISBI'16), Prague, Czech Republic, April 13-16, 2016. 2016.
+
 [2].  Najman, Laurent, and Michel Couprie. "Building the component tree in quasi-linear time." IEEE Transactions on Image Processing 15.11 (2006): 3531-3539.
+
 [3].  Meijering E, Jacob M, Sarria J, Steiner P, Hirling H, Unser M. Design and valida-tion of a tool for neurite tracing and analysis in fluorescence microscopy im-ages. Cytometry A 2004;58:167–76.
