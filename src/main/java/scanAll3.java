@@ -6,99 +6,23 @@ public class scanAll3{
 	protected double [][][] zMapx;//zscore maps for each threshold
 	protected int Nthr; //number of thresholds used
 	protected int[] thrrg; // thresholds
+	protected ComponentTree CT;
 
 	//SCANALL scan all thresholds and build the zscore map of each threshold
 	//Parameters are initialization for the first iteration
 	//kMask is binary synapse map with background 1 and detected synaspe 0
-	public scanAll3(double[][] G, double[][] Gt, boolean[][] kMask, ParaP p, ParaQ q) {
-		
+	public scanAll3(short[] imArray, double[][] G, double[][] Gt, boolean[][] kMask, ParaP p, ParaQ q) {
 		Nthr = (p.thr1-p.thr0)/p.thrg +1;
 		thrrg = new int[Nthr];
 		for(int i = 0;i<Nthr;i++)
-			thrrg[i] = p.thr0+i*p.thrg; 
-		ImageHandling IH = new ImageHandling();
-		kMapx = new int[Nthr][][];
-		zMapx = new double[Nthr][][];
-		for(int ii=0;ii<Nthr;ii++){
-			int thr = thrrg[ii];
-			boolean [][] K1 = thresholding(Gt, thr,kMask);
-
-			boolean [][] K1b = IH.imMorpho(K1, kMask, p.min_size);
-			int [][] K1b_cc = IH.bwlabel(K1b,8);
-			int ccN = IH.NextLabel;				
-			kMapx[ii] = new int[Gt.length][Gt[0].length];
-			zMapx[ii] = new double[Gt.length][Gt[0].length];
-			if(ccN==0)
-			{
-				continue;
-			}
-			double [] reg_mean = new double[ccN];
-			int [] reg_size = new int[ccN];
-			double [] z_score = new double[ccN];
-			//int [] k_x = new int[ccN]; // region count
-			int [][] reg_cor = new int[ccN][4]; //ymin xmin ymax xmax  
-			for(int i=0;i<ccN;i++){
-				reg_cor[i][0] = G.length;
-				reg_cor[i][1] = G[0].length;
-			}
-			
-			for(int i=0;i<K1b_cc.length;i++){
-				for(int j=0;j<K1b_cc[0].length;j++){
-					if(K1b_cc[i][j]!=0){
-						reg_mean[K1b_cc[i][j]-1] += G[i][j];
-						reg_size[K1b_cc[i][j]-1]++;
-						if(i<reg_cor[K1b_cc[i][j]-1][0])
-							reg_cor[K1b_cc[i][j]-1][0]=i;
-						if(j<reg_cor[K1b_cc[i][j]-1][1])
-							reg_cor[K1b_cc[i][j]-1][1]=j;
-						if(i>reg_cor[K1b_cc[i][j]-1][2])
-							reg_cor[K1b_cc[i][j]-1][2]=i;
-						if(j>reg_cor[K1b_cc[i][j]-1][3])
-							reg_cor[K1b_cc[i][j]-1][3]=j;
-					}
-				}
-			}
-
-			for(int i=0;i<ccN;i++){
-				int[][] reg0 = new int[reg_size[i]][2];
-				int reg0_cnt = 0;
-				for(int y=0;y<K1b_cc.length;y++){
-					for(int x=0;x<K1b_cc[0].length;x++){
-						if(K1b_cc[y][x]==i+1){
-							reg0[reg0_cnt][0] = y;
-							reg0[reg0_cnt++][1] = x;
-						}
-				}
-				}
-				if(reg_size[i]>p.max_size || reg_size[i]<p.min_size){
-					z_score[i] = 0;
-					//continue;
-				}
-				else if(reg_mean[i]/reg_size[i]<p.minIntensity){
-					z_score[i] = 0;
-					//continue;
-				}
-				else{
-					double LH = reg_cor[i][3]-reg_cor[i][1]+1;
-					double LW = reg_cor[i][2]-reg_cor[i][0]+1;
-					double ratio = LH>LW? LH/LW: LW/LH;
-					if(ratio>p.maxWHratio || (double)reg_size[i]/(LH*LW)<p.minfill){
-						z_score[i] = 0;
-						//continue;
-					}
-					else
-						z_score[i] = IH.scanOneSyn(Gt,K1,kMask,reg0,p,q);
-						System.out.println("Threshold "+ii+"-region:"+i+"-zscore:"+z_score[i]);
-				}
-				for(int j=0;j<reg0.length;j++){
-					kMapx[ii][reg0[j][0]][reg0[j][1]] = i+1;
-				}
-				if(z_score[i]!=0){
-					for(int j=0;j<reg0.length;j++)
-						zMapx[ii][reg0[j][0]][reg0[j][1]] = z_score[i];
-				}
-			}
-		}
+			thrrg[i] = p.thr0+i*p.thrg;
+		byte[] usedN = new byte[imArray.length];
+		// build the component tree
+		CT = new ComponentTree(imArray,usedN, q.Nx, q.Ny, p, q);
+		//component tree to zscore maps
+		CT.cpt2map(p);
+		kMapx = CT.kMapx;
+		zMapx = CT.zMapx;
 	}
 	//SCANALL scan all thresholds and find the best map in a cropped region
 	public scanAll3/*scanAll3Crop*/(double[][] Gt, boolean[][] Kmask,ParaP p,ParaQ q, int thr0) {//find the best synapse region
@@ -206,9 +130,18 @@ public class scanAll3{
 			}
 		}
 	}
-	//update the synapse map and zscore map
-	//bmask is the background mask
-	//idxUpdt is the pixel positions of detected synapse in form iteration
+	/*scanUpdtCrop:
+	*Once we detect a synapse, the other regions that overlapped with it needs to be updated. 
+	*For these regions, there are two conditions. One is this region is wholly included in the
+	*detected synapse. The other is the detected synapse is wholly included in this region. 
+	*We have Nthr zscore maps(zMapx) and index maps(kMapx). We scan all them to find such kind of regions.
+	*
+	*G is the orginal image
+	*Gt is the image after variance stablization
+	*bmask is the background mask
+	*idxUpdt saves the pixel positions of a detected synapse
+	*
+	*/
 	public void scanUpdtCrop(double[][] G, double[][] Gt, boolean[][] bmask, ArrayList<Integer[]> idxUpdt, ParaP p,
 			ParaQ q) {
 		
@@ -216,24 +149,48 @@ public class scanAll3{
 		ImageHandling IH = new ImageHandling();
 		BasicMath mBM = new BasicMath();
 		for(int ii=0;ii<Nthr;ii++){
+			/**Find the region need to be updated**/
 			int[][] Kx = kMapx[ii];
 			double [][] Zx = zMapx[ii];
 			int[] u0 = new int [idxUpdt.size()];
+			ArrayList<Double> zu0 = new ArrayList<Double>();
+			
 			for(int i=0;i<idxUpdt.size();i++){
 				u0[i] = Kx[idxUpdt.get(i)[0]][idxUpdt.get(i)[1]];
+				boolean zu0f = true;
+				for (int j=0;j<zu0.size();j++){
+					if(zu0.get(j)==Zx[idxUpdt.get(i)[0]][idxUpdt.get(i)[1]]){
+						zu0f = false;
+						break;
+					}
+				}
+				if(zu0f)
+					zu0.add(Zx[idxUpdt.get(i)[0]][idxUpdt.get(i)[1]]);
 			}
 			int lu0 = mBM.unique(u0).length;
-			//System.out.println("number of idx "+lu0);
-			if(lu0==1 && mBM.vectorMax(u0)==0){
+			if(lu0==1 && mBM.vectorMax(u0)==0){//no region,just background
 				continue;
 			}
-			if(lu0>1){
+			for(int i=0;i<zu0.size();i++){
+					for(int j=0;j<CT.Zscore_Vec.size();j++){
+						if(CT.levels.get(j)==ii & Math.abs(CT.Zscore_Vec.get(j)-zu0.get(i))<0.0001){
+							CT.Zscore_Vec.remove(j);
+							CT.levels.remove(j);
+							break;
+						}
+					}
+				}
+			if(lu0>1){//condtion 1: the region is wholly included in the detected region
 				for(int i=0;i<idxUpdt.size();i++){
 					Kx[idxUpdt.get(i)[0]][idxUpdt.get(i)[1]]=0;
 					Zx[idxUpdt.get(i)[0]][idxUpdt.get(i)[1]]=0;
+					//if()
 				}
+
 				continue;
 			}
+			//condtion 2: the region contains detected region
+			/*First thing: cut the region out*/
 			int idx0 = (int) Math.round((double)mBM.vectorSum(u0)/u0.length);//there should be only one value in u0
 			boolean [][] maskUpdt = new boolean[Kx.length][Kx[0].length];
 			for(int i=0;i<Kx.length;i++){
@@ -281,19 +238,19 @@ public class scanAll3{
 					K1[i][j] = K[rgr_min+i][rgc_min+j];
 				}
 			}
-
+			//The region is saved in Gt1, a croped rectangle from Gt
 			boolean [][] tmask1 = IH.imMorpho(K1, bmask1, p.min_size);
-			int [][] tmask1_cc = IH.bwlabel(tmask1,8);
-			int ccN1 = IH.NextLabel;
-			if(ccN1==0)
+			int [][] tmask1_cc = IH.bwlabel(tmask1,8);//saves the indexes of regions for updating
+			int ccN1 = IH.NextLabel;// the number of regions need to be updated. !ccN1 is not needed to be 1
+			if(ccN1==0)//after morphorlogy, no region left
 			{
 				continue;
 			}
+			//after morphorlogy, no region left
 			double [] reg_mean = new double[ccN1];
-			int [] reg_size = new int[ccN1];
+			int [] reg_size = new int[ccN1];//save the region size
 			double [] z_score = new double[ccN1];
-			//int [] k_x = new int[ccN]; // region count
-			int [][] reg_cor = new int[ccN1][4]; //ymin xmin ymax xmax  
+			int [][] reg_cor = new int[ccN1][4]; //coordinates of regions. [ymin xmin ymax xmax]
 			for(int i=0;i<ccN1;i++){
 				reg_cor[i][0] = tmask1_cc.length;
 				reg_cor[i][1] = tmask1_cc[0].length;
@@ -315,6 +272,7 @@ public class scanAll3{
 					}
 				}
 			}
+			/*Thrid: Scan the regions and update their index and zscores in zMapx and kMapx*/
 			for(int i=0;i<ccN1;i++){
 				int[][] smaskIdx = new int[reg_size[i]][2];
 				int smaskIdx_cnt = 0;
@@ -326,34 +284,34 @@ public class scanAll3{
 						}
 				}
 				}
-				
+				//test prior knowledge(constrains)
 				if(reg_size[i]>p.max_size || reg_size[i]<p.min_size){
 					z_score[i] = 0;
-					//continue;
 				}
 				else if(reg_mean[i]/reg_size[i]<p.minIntensity){
 					z_score[i] = 0;
-					//continue;
 				}
 				else{
 					int LH = reg_cor[i][3]-reg_cor[i][1]+1;
 					int LW = reg_cor[i][2]-reg_cor[i][0]+1;
 					double ratio = LH>LW? LH/LW: LW/LH;
-					if(ratio>p.maxWHratio || reg_size[i]/(LH*LW)<p.minfill){
+					if(ratio>p.maxWHratio || reg_size[i]/(double)(LH*LW)<p.minfill){
 						z_score[i] = 0;
-						//continue;
 					}
-					else{
+					else{//if all constrains satisfied, calculate z-score
 						z_score[i] = IH.scanOneSyn(Gt1,tmask1,bmask1,smaskIdx,p,q);
 					}
 				}
+				//update the kMapx[ii] and zMapx[ii] with new zscore.
 				for(int j=0;j<smaskIdx.length;j++){
 					kMapx[ii][smaskIdx[j][0]+rgr_min][smaskIdx[j][1]+rgc_min] = j+1+nSyn0;
 				}
-				if(z_score[i]!=0)
+				if(z_score[i]!=0){
 					for(int j=0;j<smaskIdx.length;j++)
 						zMapx[ii][smaskIdx[j][0]+rgr_min][smaskIdx[j][1]+rgc_min] = z_score[i];
-				System.out.println(i+"Updated z_score："+z_score[i]);
+					CT.Zscore_Vec.add(z_score[i]);
+					CT.levels.add(ii);
+				}
 			}
 		}
 	}
