@@ -19,61 +19,12 @@ public class BestSyn {
 		extractBestSyn(scanMap, p);
 	}
 	public void extractBestSyn_fdr(scanAll3 scanMap, ParaP p, ArrayList<Double> In_PopUplist) {
-
-		kMap0 = new boolean[scanMap.kMapx[0].length][scanMap.kMapx[0][0].length];// temp use
-		zMap0 = new double[scanMap.zMapx[0].length][scanMap.zMapx[0][0].length];// temp use
 		/*extract the best map*/
-		int nThr = scanMap.kMapx.length;
-		double[] maxZ = new double[nThr];
 		BasicMath mBM = new BasicMath();
-		ImageHandling IH = new ImageHandling();
-		//int nSynPos = 0;
-		boolean [][] zmask = new boolean[scanMap.zMapx[0].length][scanMap.zMapx[0][0].length];
-		ArrayList<Double> Zscore_Vec = new ArrayList<Double>();
-		double C=-1000; //largest zscore
-		int I = -10;//map number of the largest zscore
-		for(int ii=0;ii<nThr;ii++){
-			for(int i=0;i<kMap0.length;i++){
-				for(int j=0;j<kMap0[0].length;j++){
-					//kMap0[i][j] = scanMap.kMapx[nThr][i][j]!=0;
-					zmask[i][j] = scanMap.zMapx[ii][i][j]!=0;
-					//if(scanMap.zMapx[nThr][i][j]!=0)
-					zMap0[i][j] = scanMap.zMapx[ii][i][j];
-				}
-			}
-			//int max_kMap0 = mBM.matrix2DMax(scanMap.kMapx[nThr]);
-			zmask = IH.bwareaopen(zmask, p.min_size,8);
-			ArrayList<Double> zMapMM = new ArrayList<Double>();
-			for(int i=0;i<zMap0.length;i++){
-				for(int j=0;j<zMap0[0].length;j++){
-					if(!zmask[i][j])
-						zMap0[i][j] = 0;
-					/*unique zscores, this might wrongly remove ones with identical zscore, though minor influence*/
-					if(zMap0[i][j]!=0){
-						boolean addflag = true;
-						for(int k=0;k<zMapMM.size();k++){
-							if(Math.abs(zMap0[i][j]-zMapMM.get(k))<0.0001){
-								addflag = false;
-								break;
-							}	
-						}
-						if(addflag)
-							zMapMM.add(zMap0[i][j]);
-					}
-				}
-			}
-			if(zMapMM.size()==0){
-				maxZ[ii] = -1000;
-				continue;
-			}
-			Zscore_Vec.addAll(zMapMM);
-			maxZ[ii] = Collections.max(zMapMM);
-			//nSynPos += max_kMap0;
-			if(C<maxZ[ii]){
-				C = maxZ[ii];
-				I = ii;
-			}
-		}
+		scanMap.CT.extractBestSyn(p);
+		double C = scanMap.CT.C;
+		int I = scanMap.CT.I;
+		ArrayList<Double> Zscore_Vec = scanMap.CT.Zscore_Vec;
 		/*FDR Control*/
 		ArrayList<Double> pvalue = new ArrayList<Double>();
 		for(int i=0;i<Zscore_Vec.size();i++){
@@ -84,20 +35,19 @@ public class BestSyn {
 		for(int i=0;i<total_len;i++)
 			FDR_Con[i] = p.fdr*((double)(i+1))/total_len;
 		if(p.fdr_den){
-			for(int i=0;i<total_len;i++)
-				FDR_Con[i] = FDR_Con[i]*Math.log(total_len);
+			for(int i=0;i<total_len;i++){
+				FDR_Con[i] = FDR_Con[i]/Math.log(total_len);
+			}
 		}
 		pvalue.addAll(In_PopUplist);
 		Collections.sort(pvalue);// Ascend; add Collections.reverseOrder() for descend
 		double OK_pvalue = 0;
-		//double thrZ;
 		for(int i=pvalue.size()-1;i>=0;i--){
 			if(pvalue.get(i)<FDR_Con[i]){
 				OK_pvalue = pvalue.get(i);
 				break;
 			}
 		}
-		//System.out.printf("P-value Threshold:%.4f==>Cvalue:%.4f\n",OK_pvalue,C);
 		double bestP = mBM.zTop(C);
 		if(bestP<OK_pvalue){
 			thrZ = -1000;
@@ -109,10 +59,9 @@ public class BestSyn {
 		}
 		/*PopUp the best ROI and save it in PopUplist*/
 		if (!PopUpROI(scanMap, I, C,p)) {
-			thrZ = mBM.zTop(Collections.max(In_PopUplist));
+			thrZ = mBM.pToZ(Collections.max(In_PopUplist));
 		}
 		PopUplist = new ArrayList<Double>(In_PopUplist);
-
 	}
 	
 	public void extractBestSyn(scanAll3 scanMap, ParaP p) {
@@ -130,9 +79,7 @@ public class BestSyn {
 		for(int ii=0;ii<nThr;ii++){
 			for(int i=0;i<kMap0.length;i++){
 				for(int j=0;j<kMap0[0].length;j++){
-					//kMap0[i][j] = scanMap.kMapx[ii][i][j]!=0;
 					zmask[i][j] = scanMap.zMapx[ii][i][j]!=0;
-					//if(scanMap.zMapx[nThr][i][j]!=0)
 					zMap0[i][j] = scanMap.zMapx[ii][i][j];
 				}
 			}
@@ -198,7 +145,7 @@ public class BestSyn {
 			boolean[][] K1 = new boolean[zMap0.length][zMap0[0].length];
 			for(int i=0;i<zMap0x.length;i++)
 				for(int j=0;j<zMap0x[0].length;j++)
-					K1[i][j] = zMap0x[i][j]==C;
+					K1[i][j] = Math.abs(zMap0x[i][j]-C)<0.001;
 			boolean[][] tmask = IH.bwareaopen(K1, p.min_size,8);
 			int[][] tmask_cc = IH.bwlabel(tmask,8);
 			int ccN = mBM.matrix2DMax(tmask_cc);
