@@ -1,14 +1,15 @@
 import java.util.ArrayList;
 import java.util.Collections;
 /**
- * This class build a component tree from a image array. Also contain another two functions "cpt2map" which transfers component tree to 
- * zscore maps and "extractBestSyn" which extracts highest-score region.
+ * This class is a fast version of ppsd, but it sacrifice some accuracy. This version totally abandons updating which only 
+ * give out significant regions with high z-score and also meet the requirements of prior knowledge. This algorithm takes 
+ * about 2s to handle a 1k*1k image without noise variance estimation(40s). 30 times faster than before.
  * 
  * Major idea of tree building and zscore calculation is from Dr.Petter Ranefall(petter.ranefall@it.uu.se).
- * For details of creating component tree, please refer to ìFast Adaptive Local Thresholding Based on Ellipse fitî(ISBI'16) and 
- * ìBuilding the Component Tree in Quasi-Linear Timeî (TIP 2006 Vol.15 No.11).
- * @version 1.0
- * @date 2016-07-11
+ * For details of creating component tree, please refer to ‚ÄúFast Adaptive Local Thresholding Based on Ellipse fit‚Äù(ISBI'16) and 
+ * ‚ÄúBuilding the Component Tree in Quasi-Linear Time‚Äù (TIP 2006 Vol.15 No.11).
+ * @version 1.1
+ * @date 2016-07-14
  *
  */
 
