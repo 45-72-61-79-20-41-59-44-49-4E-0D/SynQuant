@@ -7,7 +7,7 @@ SynQuant detect synapses through a totally unsupervised probability principled f
 Add the component tree structure for synapse detection suggested by Dr.Petter Ranefall. The version 1.1 now is 3 times faster than before.
 
 # Update 2
-Version 1.2 now allows for the detection of pre-, post-synaptic puncta and synaptic sites. It can output ROI regions through ROI manager now and user could save the mask by themselves. The quantification can be done based on detected synapses or synaptic sites.
+Suggested by our collaborator Gerard Broussard, version 1.2 now allows for the detection of pre-, post-synaptic puncta and synaptic sites. It can output ROI regions through ROI manager now and user could save the mask by themselves. The quantification can be done based on detected synapses or synaptic sites.
 
 The paper for this algorithm is in preparation.
 # How to cite
