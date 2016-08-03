@@ -10,7 +10,12 @@ import javax.imageio.ImageIO;
 import javax.swing.text.html.HTMLDocument.Iterator;
 
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.gui.NewImage;
+import ij.gui.PolygonRoi;
+import ij.gui.Roi;
+import ij.gui.Wand;
+import ij.plugin.frame.RoiManager;
 import ij.process.BinaryProcessor;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
@@ -842,5 +847,50 @@ public class ImageHandling {
         }
         NextLabel--;
         return labels;
+	}
+	public void DisplayROI(int nSyn0,int height,int width,int[][] SynR1Idx, ImagePlus imp,String frametitle){
+		int[][] roi_pt1 = new int[nSyn0][2]; //larger than enough
+		long [] roi_size = new long[nSyn0];
+		for(int i = 0; i<height;i++){
+			for(int j = 0; j<width;j++){
+				int tmp = SynR1Idx[i][j];
+				if(tmp!=0){
+					roi_pt1[tmp-1][0] = i;
+					roi_pt1[tmp-1][1] = j;
+					roi_size[tmp-1] = roi_size[tmp-1]+1;
+				}
+			}
+		}
+		String imtitle = "";
+		ImagePlus newimp = NewImage.createByteImage (imtitle, width, height, 1,/*stack=1*/ 
+				NewImage.FILL_WHITE);
+		ImageProcessor impNP = newimp.getProcessor(); 
+		for(int i = 0; i<height;i++){
+			for(int j = 0; j<width;j++){
+				impNP.putPixel(j,i,SynR1Idx[i][j]);
+			}
+		}
+		ImageStack impstack = newimp.getStack();
+		// Generate roimanager
+		ByteProcessor ip = (ByteProcessor)impstack.getProcessor(1).convertToByte(true);
+		RoiManager manager = new RoiManager();
+		int[] roi2fiu = new int[nSyn0];
+		int roi_cnt = 0;
+		double wandVal = 0.01;
+		for(int i=0;i<nSyn0;i++){
+			roi2fiu[roi_cnt] = i;
+			roi_cnt++;
+			Wand w = new Wand(ip);
+			w.autoOutline(roi_pt1[i][1],roi_pt1[i][0],wandVal,Wand.EIGHT_CONNECTED); 
+			//System.out.println("roi size:"+w.npoints);
+			if (w.npoints>0) { // we have an roi from the wand... 
+				Roi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, Roi.TRACED_ROI);
+				imp.setRoi(roi);
+				manager.addRoi(roi);
+			}
+		}
+		manager.setTitle(frametitle);
+		manager.runCommand("show all with labels");
+		manager.setSize(300, 400);
 	}
 }

@@ -15,9 +15,9 @@ public class ParaP {
     public int thr1;
     public int thrg=10;  // step size
     public double thrZ = NormInv(thrSig,0,1);
-    public int min_size = 8;  // !! minimun synapse size in pixels, should be image specific
+    public int min_size = 4;  // !! minimun synapse size in pixels, should be image specific
     public int max_size = 100; // !! maxmum synapse size in pixels, should be image specific
-    public int minIntensity = 50; 
+    public int minIntensity = 10; 
     public int max_ratio = 2;  //
     public int conn_direc = 8;  // define neighbors
 	public double minfill = 0.5; //for convex shape of synapse
@@ -27,10 +27,12 @@ public class ParaP {
 	public double fdr;
 	public boolean fdr_den = true;
 	
-	public ParaP(double InputFdr, int Lowthreshold, int Highthreshold){
+	public ParaP(double InputFdr, int Lowthreshold, int Highthreshold,int MinSize,int MaxSize){
 		fdr = InputFdr;
-		thr0 = Math.max(50,Lowthreshold);
+		thr0 = Math.max(minIntensity,Lowthreshold);
 		thr1 = Math.min(250,Highthreshold);
+		min_size = MinSize;
+		max_size = MaxSize;
 	}
 	
 	/*read mu from lookup table*/
@@ -59,7 +61,6 @@ public class ParaP {
 			for(int j=0;j<100;j++)
 				matrix[i][j] = sigma2.Sigma[i-50][j];
         return matrix;                             
-		
 	}
 	/*read sigma and mu from txt file*/
 	public double[][] InitialMuSigma(String Filepath){

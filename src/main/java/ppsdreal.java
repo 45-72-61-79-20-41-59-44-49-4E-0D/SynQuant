@@ -18,35 +18,34 @@ public class ppsdreal{
     	int loopCnt = 0;
     	nSyn0 = 1;
     	BasicMath BM = new BasicMath();
-    	long startTime1=System.nanoTime();
+    	//long startTime1=System.nanoTime();
     	scanAll3 scanMap = new scanAll3(imArray, G,Gt,kMask,p,q);// thresholding images with multi thresholds(50:10:220)
     	//byte[] usedN = new byte[imArray.length];
     	//ComponentTree CT_scanMap = new ComponentTree(imArray,usedN, G[0].length, G.length,p, q);
-    	long endTime1=System.nanoTime();
-    	System.out.println("scanAll3 First Running time: "+(endTime1-startTime1)/1e9); 
+    	//long endTime1=System.nanoTime();
+    	//System.out.println("scanAll3 First Running time: "+(endTime1-startTime1)/1e9); 
     	ArrayList<Double> Iter_PopUplist = new ArrayList<Double>(); //zscores of detected synapses
     	//
-    	startTime1=System.nanoTime();
-    	double bs = 0,sib=0,suc=0;
+    	//startTime1=System.nanoTime();
+    	//double bs = 0,sib=0,suc=0;
     	while(!doneAll){
     		loopCnt = loopCnt + 1;
     		ArrayList<Integer[]> idxUpdt = new ArrayList<Integer[]>();
-    		long startTime2=System.nanoTime();
+    		//long startTime2=System.nanoTime();
     		BestSyn bestSynMap = new BestSyn(scanMap, p, Iter_PopUplist);//find best region with highest zscore
     		thrZ = bestSynMap.thrZ;
-    		long endTime2=System.nanoTime();
-        	bs = bs+(endTime2-startTime2)/1e9;
-        	
+    		//long endTime2=System.nanoTime();
+        	//bs = bs+(endTime2-startTime2)/1e9;
     		Iter_PopUplist = new ArrayList<Double>(bestSynMap.PopUplist);
     		// further scan within best region -----
     		if(BM.Allfalse(bestSynMap.kMap0)){
     			doneAll = true;
     		}
     		else{//start scan, find if there is a region score higher inside the best region
-    			startTime2=System.nanoTime();
+    			//startTime2=System.nanoTime();
     			SynInBest SynBBest = new SynInBest(Gt,bestSynMap,p,q);
-    			endTime2=System.nanoTime();
-    			sib = sib+(endTime2-startTime2)/1e9;
+    			//endTime2=System.nanoTime();
+    			//sib = sib+(endTime2-startTime2)/1e9;
             	
     			if(SynBBest.foundOne){
     				//insert the found region(marked in SynBBest) into kMap, zMap, thrMap
@@ -82,15 +81,15 @@ public class ppsdreal{
     						idxUpdt.add(new Integer[] {i,j});
     				}
     			}
-    			startTime2=System.nanoTime();
+    			//startTime2=System.nanoTime();
     			scanMap.scanUpdtCrop(G,Gt,kMask,idxUpdt,p,q);
-    			endTime2=System.nanoTime();
-    			suc = sib+(endTime2-startTime2)/1e9;
+    			//endTime2=System.nanoTime();
+    			//suc = sib+(endTime2-startTime2)/1e9;
     		}
     	}
-    	endTime1=System.nanoTime();
-    	System.out.println("While Loop Running time: "+(endTime1-startTime1)/1e9+" Loop:"+loopCnt); 
-    	System.out.println("BestSyn,"+bs+" SynInBest,"+sib+" scanUpdtCrop,"+suc); 
+    	//endTime1=System.nanoTime();
+    	//System.out.println("While Loop Running time: "+(endTime1-startTime1)/1e9+" Loop:"+loopCnt); 
+    	//System.out.println("BestSyn,"+bs+" SynInBest,"+sib+" scanUpdtCrop,"+suc); 
     	nSyn0--;
     }
     // post processing with size constrain and pvalue constrain
@@ -100,7 +99,7 @@ public class ppsdreal{
 
     	boolean[][] kMapi = new boolean[kMap.length][kMap[0].length];
     	
-    	double thrZx = thrZ <-2? -2:thrZ; //pvalue threshold should not be too small, otherwise FDR control will be not useful
+    	double thrZx = thrZ;// <-2? -2:thrZ; //pvalue threshold should not be too small, otherwise FDR control will be not useful
     	int[] roi_size = new int[nSyn0];
     	for(int i=0;i<kMap.length;i++)
     		for(int j=0;j<kMap[0].length;j++)

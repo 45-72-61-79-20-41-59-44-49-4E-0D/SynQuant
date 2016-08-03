@@ -10,30 +10,31 @@ import ij.process.ImageProcessor;
 //parameter for dendrite extraction
 //Details can be found in Paper: "Automated analysis of neuronal morphology, synapse number and synaptic recruitment"
 public class GrowNeurite {
-    public int height;
-    public int width;
-    public boolean[][] neuriteMask;
-    public int min_length = 5;
-    public double xyRes;//one pixel corresponding to such distance in meters
-    public double filterSize = 1e-6;//in meters, corresponding to about 6 pixels in normal resolution;
-    public double maxAddCost = 0.9;// Maximal cost if we still want to add pixel
-    public double connectCostLambda = 0.7;
-    public double[][] rigidity;
-    public double[][][] dirVect;
-    public double lambdaMax;
-    public boolean[][] den_ext;
-    public int[][] CurSkelIm;
-    public int[][] CurIm;
-    public int CurNum;
-    public double[][] dendrite;
-    public int min_intensity = 20;//too dim
-    public double[] denSize;
-    public double[] denIntensity;
-    public double[] denLength;
-    public int maxDisSkel = 20;
-    public int DenMaxLen = 200;
+	protected int height;
+    protected int width;
+    protected boolean[][] neuriteMask;
+    protected int min_length = 5;
+    protected double xyRes;//one pixel corresponding to such distance in meters
+    protected double filterSize = 5e-7;//in meters, corresponding to about 6 pixels in normal resolution;
+    protected double maxAddCost = 0.90;// Maximal cost if we still want to add pixel
+    protected double connectCostLambda = 0.7;
+    protected double[][] rigidity;
+    protected double[][][] dirVect;
+    protected double lambdaMax;
+    protected boolean[][] den_ext;
+    protected int[][] CurSkelIm;
+    protected int[][] CurIm;
+    protected int CurNum;
+    protected double[][] dendrite;
+    protected int min_intensity = 20;//too dim
+    protected double[] denSize;
+    protected double[] denIntensity;
+    protected double[] denLength;
+    protected int maxDisSkel = 20;
+    protected int DenMaxLen = 200;
+    protected long totallength=0;
     
-	public GrowNeurite(short[] imArray, int inwidth, int inheight,double vox_x){
+	public GrowNeurite(short[] imArray, int inwidth, int inheight,double vox_x,boolean displayROI, String RoiTitle){
 		width = inwidth;
 		height = inheight;
 		dendrite = new double[height][width];
@@ -93,6 +94,13 @@ public class GrowNeurite {
 		den_nosiy = IH.imopen(den_nosiy, 4);
 		den_ext = IH.bwareaopen(den_nosiy, 200, 4);
 		boolean[][] skel = IH.Skeleton(den_ext);//extract skeleton of dendrite
+		for(int i=0;i<height;i++){
+			for(int j=0;j<width;j++){
+				if(skel[i][j])
+					totallength++;
+			}
+		}
+		
 		ArrayList<Integer[]> branchendPts = IH.branchendpts(skel);//get branch points and end points
 		
 		CurSkelIm = CuveSkelImGen(skel,min_length,branchendPts);//cut dendrite skeleton into pieces
@@ -100,6 +108,17 @@ public class GrowNeurite {
 		ImagePlus outimp = createImage();
 		outimp.show();
 		outimp.updateAndDraw();
+		displayROI = false;//Usally not show dendrite ROI regions
+		if(displayROI){
+			boolean[][] BWCurveIm = new boolean[CurIm.length][CurIm[0].length];
+			for (int i = 0; i < width; i++)
+				for (int j = 0; j < height; j++)
+					if (CurIm[j][i] > 0)
+						BWCurveIm[j][i] = true;
+
+			int[][] denIdx = IH.bwlabel(BWCurveIm, 8);
+			IH.DisplayROI(IH.NextLabel, height, width, denIdx, outimp,RoiTitle);
+		}
 	}
 	private int[][] CurImGen(int[][] skelLabel, boolean[][] den, boolean[][] skel) {
 		// TODO Auto-generated method stub

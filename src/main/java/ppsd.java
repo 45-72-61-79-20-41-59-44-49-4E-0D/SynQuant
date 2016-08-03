@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import ij.*;
 import ij.gui.*;
 import ij.plugin.*;
+import ij.plugin.frame.RoiManager;
 import ij.process.*;
 
 /**
@@ -55,10 +56,12 @@ public class ppsd {
 	protected int width; //image width
 	protected int height; //image height
 	protected boolean[][] kSynR1; //bianry synapse Map
+	protected int[][] SynR1Idx; //synapse Map
+	protected int nSyn0;
 	protected double fdr;//threshold for FDR control, user input
 
-	public ppsd(short[] imArray, int inwidth, int inheight,double vox_x, double infdr) {
-		long startTime1=System.nanoTime();     // Testing running time: start
+	public ppsd(short[] imArray, int inwidth, int inheight,double vox_x, double infdr,boolean fastFlag,int MinSize,int MaxSize,boolean displayROI, String ROITitle) {
+		//long startTime1=System.nanoTime();     // Testing running time: start
 		width = inwidth;
 		height = inheight;
 		fdr = infdr;
@@ -72,24 +75,43 @@ public class ppsd {
 		BasicMath mBM = new BasicMath();
 		//initialize Gt and parameter q
 		getNoiseVST(G, q);
-		ParaP p = new ParaP(fdr,(int)mBM.matrix2DMin(Gt),(int)mBM.matrix2DMax(Gt));
+		ParaP p = new ParaP(fdr,(int)mBM.matrix2DMin(Gt),(int)mBM.matrix2DMax(Gt),MinSize, MaxSize);
 		//ppsd start
 		boolean [][] kMask = new boolean[G.length][G[0].length];
 		for (int i = 0; i < kMask.length; i++)
 			for (int j = 0; j < kMask[0].length; j++)
 				kMask[i][j] = true;
-		ppsdreal ppsd_main = new ppsdreal(imArray, G,Gt, kMask, p, q);
 
-		//Post processing: size and zscore
-		kSynR1 = ppsd_main.ppsd_post(Gt,p,q);
-
-		//Results illustration
-		long endTime1=System.nanoTime(); 	  // Testing running time: end
-		System.out.println("Running time: "+(endTime1-startTime1)/1e9); 
+		if(!fastFlag){/*General version of PPSD*/
+			ppsdreal ppsd_main = new ppsdreal(imArray, G, Gt, kMask, p, q);
+			// Post processing: size and zscore
+			kSynR1 = ppsd_main.ppsd_post(Gt, p, q);
+			//nSyn0 = ppsd_main.nSyn0;
+			SynR1Idx = ppsd_main.kMap;
+			nSyn0 = ppsd_main.nSyn0;
+		}
+		else{/*Fast version of PPSD(No zscore updating)*/
+			Fastppsdreal ppsd_main = new Fastppsdreal(imArray, width,height, p, q);
+			kSynR1 = ppsd_main.SynR1;
+			ImageHandling IH = new ImageHandling();
+			SynR1Idx = IH.bwlabel(kSynR1, 8);
+			nSyn0 = IH.NextLabel;
+			//nSyn0 = ppsd_main.nSyn0;
+		}
+		//long endTime1=System.nanoTime(); 	  // Testing running time: end
+		//System.out.println("Running time: "+(endTime1-startTime1)/1e9); 
 		
-		ImagePlus outimp = createImage();
-		outimp.show();
-		outimp.updateAndDraw();
+		//Results illustration:Image
+		imp = createImage(ROITitle);
+		stack = imp.getStack();
+
+		imp.show();
+		imp.updateAndDraw();
+		//ROI
+		if(displayROI){
+			ImageHandling IH = new ImageHandling();
+			IH.DisplayROI(nSyn0,height,width,SynR1Idx, imp,ROITitle);
+		}
 	}
 	//noise stabilization and variance estimation of Foi's paper. 
 	//More details can be found: http://www.cs.tut.fi/~foi/sensornoise.html
@@ -260,24 +282,34 @@ public class ppsd {
 		return qq;
 	}
 	// Color image by combining detection results(red) with original image(green)
-	public ImagePlus createImage(){
-		ImagePlus outimp = NewImage.createRGBImage("Synapse Detection Results", width, height, 1,NewImage.FILL_BLACK);
+	public ImagePlus createImage(String ROITitle){
+		ImagePlus outimp = NewImage.createRGBImage(ROITitle+" Detection Results", width, height, 1,NewImage.FILL_BLACK);
 		ImageProcessor outIP =  outimp.getProcessor();
-		
-		for (int i = 0; i < width; i++) {
-			for(int j = 0;j<height;j++){
-			// put channel values in an integer
-			if(kSynR1[j][i])
-				outIP.set(i, j, (((int)200 & 0xff) << 16)
-				          + (((int)G[j][i] & 0xff) << 8)
-				          +  ((int)0 & 0xff));
-			else
-				outIP.set(i, j, (((int)0 & 0xff) << 16) 
-				          + (((int)G[j][i] & 0xff) << 8)
-				          +  ((int)0 & 0xff));
+		if(ROITitle.contains("Pre")){
+			for (int i = 0; i < width; i++) {
+				for (int j = 0; j < height; j++) {
+					// put channel values in an integer
+					if (kSynR1[j][i])
+						outIP.set(i, j, (((int) G[j][i] & 0xff) << 16) + (((int) 200 & 0xff) << 8) + ((int) G[j][i] & 0xff));
+					else
+						outIP.set(i, j, (((int) G[j][i] & 0xff) << 16) + (((int) 0 & 0xff) << 8) + ((int) G[j][i] & 0xff));
 
+				}
 			}
 		}
+		else{
+			for (int i = 0; i < width; i++) {
+				for (int j = 0; j < height; j++) {
+					// put channel values in an integer
+					if (kSynR1[j][i])
+						outIP.set(i, j, (((int) 200 & 0xff) << 16) + (((int) G[j][i] & 0xff) << 8) + ((int) 0 & 0xff));
+					else
+						outIP.set(i, j, (((int) 0 & 0xff) << 16) + (((int) G[j][i] & 0xff) << 8) + ((int) 0 & 0xff));
+
+				}
+			}
+		}
+		
 		//outimp = NewImage.createRGBImage(pixels, width, height, true);
 		return outimp;
 	}
@@ -382,4 +414,47 @@ public class ppsd {
 				cA_4[i][j] = cA_3[i][j*2+1];
 		return cA_4;
 	}
+	/*public void DisplayROI(){
+		int[][] roi_pt1 = new int[nSyn0][2]; //larger than enough
+		long [] roi_size = new long[nSyn0];
+		for(int i = 0; i<height;i++){
+			for(int j = 0; j<width;j++){
+				int tmp = SynR1Idx[i][j];
+				if(tmp!=0){
+					roi_pt1[tmp-1][0] = i;
+					roi_pt1[tmp-1][1] = j;
+					roi_size[tmp-1] = roi_size[tmp-1]+1;
+				}
+			}
+		}
+		String imtitle = "";
+		ImagePlus newimp = NewImage.createByteImage (imtitle, width, height, 1,
+				NewImage.FILL_WHITE);
+		ImageProcessor impNP = newimp.getProcessor(); 
+		for(int i = 0; i<height;i++){
+			for(int j = 0; j<width;j++){
+				impNP.putPixel(j,i,SynR1Idx[i][j]);
+			}
+		}
+		ImageStack impstack = newimp.getStack();
+		// Generate roimanager
+		ByteProcessor ip = (ByteProcessor)impstack.getProcessor(1).convertToByte(true);
+		RoiManager manager = new RoiManager();
+		int[] roi2fiu = new int[nSyn0];
+		int roi_cnt = 0;
+		double wandVal = 0.01;
+		for(int i=0;i<nSyn0;i++){
+			roi2fiu[roi_cnt] = i;
+			roi_cnt++;
+			Wand w = new Wand(ip);
+			w.autoOutline(roi_pt1[i][1],roi_pt1[i][0],wandVal,Wand.EIGHT_CONNECTED); 
+			if (w.npoints>0) { // we have an roi from the wand... 
+				Roi roi = new PolygonRoi(w.xpoints, w.ypoints, w.npoints, Roi.TRACED_ROI);
+				imp.setRoi(roi);
+				manager.addRoi(roi);
+			}
+		}
+		manager.runCommand("show all with labels");
+		manager.setSize(300, 400);
+	}*/
 }

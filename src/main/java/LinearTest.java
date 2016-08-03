@@ -16,12 +16,12 @@ public class LinearTest {
 	public double[][] DenFeatures;
 	public double[] betas;
 	public double[] pvalues;
-	public LinearTest(ppsd syn, GrowNeurite den){
-		height = syn.kSynR1.length;
-		width = syn.kSynR1[0].length;
+	public LinearTest(boolean[][] kSynR1, GrowNeurite den){
+		height = kSynR1.length;
+		width = kSynR1[0].length;
 		
 		ImageHandling IH = new ImageHandling();
-		lbSyn = IH.bwlabel(syn.kSynR1,8);
+		lbSyn = IH.bwlabel(kSynR1,8);
 		SynNum = IH.NextLabel;
 		//ArrayList<Integer[]> syn_pos = new ArrayList<Integer[]>();
 		int[][] syn_pos = new int[SynNum][4];

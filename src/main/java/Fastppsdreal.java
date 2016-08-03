@@ -1,15 +1,14 @@
 import java.util.ArrayList;
 import java.util.Collections;
 /**
- * This class is a fast version of ppsd, but it sacrifice some accuracy. This version totally abandons updating which only 
- * give out significant regions with high z-score and also meet the requirements of prior knowledge. This algorithm takes 
- * about 2s to handle a 1k*1k image without noise variance estimation(40s). 30 times faster than before.
+ * This class build a component tree from a image array. Also contain another two functions "cpt2map" which transfers component tree to 
+ * zscore maps and "extractBestSyn" which extracts highest-score region.
  * 
  * Major idea of tree building and zscore calculation is from Dr.Petter Ranefall(petter.ranefall@it.uu.se).
- * For details of creating component tree, please refer to ‚ÄúFast Adaptive Local Thresholding Based on Ellipse fit‚Äù(ISBI'16) and 
- * ‚ÄúBuilding the Component Tree in Quasi-Linear Time‚Äù (TIP 2006 Vol.15 No.11).
- * @version 1.1
- * @date 2016-07-14
+ * For details of creating component tree, please refer to ìFast Adaptive Local Thresholding Based on Ellipse fitî(ISBI'16) and 
+ * ìBuilding the Component Tree in Quasi-Linear Timeî (TIP 2006 Vol.15 No.11).
+ * @version 1.0
+ * @date 2016-07-11
  *
  */
 
@@ -19,6 +18,7 @@ public class Fastppsdreal{
 	protected int[] parNode; //Parent nodes
 	
 	protected boolean[][] SynR1;
+	protected int nSyn0;
 	//for prior knowledge test
 	int[][] BxCor;//each area's bounding box coordinates
 	int minSize, maxSize;
@@ -387,9 +387,9 @@ public class Fastppsdreal{
 		for (i = 0; i < height; i++)
 			for (j = 0; j < width; j++)
 				zMap[i][j] = zscore[i * width + j] ;// the data is saved by line
-		ImageHandling IH = new ImageHandling();
+		//ImageHandling IH = new ImageHandling();
 		ArrayList<Double> zscore_vec = new ArrayList<Double>();
-		int[][] kMap = IH.bwlabel(zMap, 8, zscore_vec);
+		//int[][] kMap = IH.bwlabel(zMap, 8, zscore_vec);
 		
 		double threshold = FDR_Control(zscore_vec,p);
 		SynR1 = new boolean [height][width];
@@ -397,6 +397,8 @@ public class Fastppsdreal{
 			for (j = 0; j < width; j++)
 				if(zMap[i][j]>threshold && outputArray[i * width + j]==OBJECT)
 					SynR1[i][j] = true;
+		//IH.bwlabel(SynR1,8);
+		//nSyn0 = IH.NextLabel;
 	}
 	/*Label object or not*/
 	public int findBestLevel(int e, int optE)
